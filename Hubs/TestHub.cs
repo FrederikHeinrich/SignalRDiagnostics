@@ -8,7 +8,8 @@ public sealed class TestHub(ConnectionTracker tracker, ILogger<TestHub> logger) 
 {
     public override async Task OnConnectedAsync()
     {
-        var hubEvent = tracker.AddConnection(Context.ConnectionId, UserAgent());
+        var requestDiagnostics = RequestDiagnosticsBuilder.From(Context.GetHttpContext());
+        var hubEvent = tracker.AddConnection(Context.ConnectionId, requestDiagnostics);
         logger.LogInformation("SignalR connected: {ConnectionId}", Context.ConnectionId);
         await PublishEventAsync(hubEvent);
         await SendMonitorUpdateAsync();
@@ -147,8 +148,4 @@ public sealed class TestHub(ConnectionTracker tracker, ILogger<TestHub> logger) 
         return Clients.Group(HubGroups.Monitors).SendAsync("MonitorUpdate", tracker.GetSnapshot());
     }
 
-    private string? UserAgent()
-    {
-        return Context.GetHttpContext()?.Request.Headers["User-Agent"].ToString();
-    }
 }

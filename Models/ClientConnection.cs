@@ -32,6 +32,8 @@ public sealed class ClientConnection
 
     public string? PageUrl { get; set; }
 
+    public RequestDiagnostics? RequestDiagnostics { get; set; }
+
     public ClientConnectionDto ToDto(DateTimeOffset now)
     {
         return new ClientConnectionDto(

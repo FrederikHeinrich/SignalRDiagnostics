@@ -126,6 +126,8 @@ Recommended test flow:
 
 When the full test finishes, `/client` shows a completion report with target settings, selected transport and authentication mode, negotiate result, connection id, echo timing, ping statistics, message counters, last error, and copy/download actions.
 
+The `/monitor` server event log includes sanitized negotiate and connection request diagnostics for headers, cookies, and query parameters. Sensitive values such as bearer tokens, cookie values, WebSocket keys, and `access_token` query values are redacted while names, counts, and value lengths remain visible for routing and authentication diagnostics.
+
 Example gateway URLs:
 
 - `https://diag.example.com/client`

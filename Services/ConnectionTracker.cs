@@ -18,7 +18,7 @@ public sealed class ConnectionTracker
     private long _totalConnections;
     private long _totalDisconnects;
 
-    public HubEvent AddConnection(string connectionId, string? userAgent)
+    public HubEvent AddConnection(string connectionId, RequestDiagnostics? requestDiagnostics)
     {
         var now = DateTimeOffset.UtcNow;
         var connection = new ClientConnection
@@ -27,13 +27,14 @@ public sealed class ConnectionTracker
             ClientId = connectionId,
             ConnectedSince = now,
             LastSeen = now,
-            UserAgent = userAgent
+            RequestDiagnostics = requestDiagnostics,
+            UserAgent = requestDiagnostics?.UserAgent
         };
 
         _connections[connectionId] = connection;
         Interlocked.Increment(ref _totalConnections);
 
-        return AddEvent("connected", connection, "SignalR connection opened");
+        return AddEvent("connected", connection, "SignalR connection opened", RequestDetails(connection));
     }
 
     public HubEvent RegisterClient(string connectionId, ClientInfo clientInfo)
@@ -50,7 +51,7 @@ public sealed class ConnectionTracker
         connection.TransportMode = FirstValue(clientInfo.TransportMode, connection.TransportMode);
         connection.AuthMode = FirstValue(clientInfo.AuthMode, connection.AuthMode);
 
-        return AddEvent("connected", connection, $"Registered {role} client");
+        return AddEvent("connected", connection, $"Registered {role} client", RequestDetails(connection));
     }
 
     public HubEvent RemoveConnection(string connectionId, string? error)
@@ -179,6 +180,16 @@ public sealed class ConnectionTracker
         return AddEvent("error", connection, message);
     }
 
+    public HubEvent RecordHttpRequest(
+        string eventType,
+        string connectionId,
+        string clientId,
+        string message,
+        RequestDiagnostics? requestDiagnostics)
+    {
+        return AddEvent(eventType, connectionId, clientId, message, RequestDetails(requestDiagnostics));
+    }
+
     public IReadOnlyList<HubEvent> MarkSuspicious(DateTimeOffset now, TimeSpan staleAfter)
     {
         var events = new List<HubEvent>();
@@ -279,12 +290,22 @@ public sealed class ConnectionTracker
         string message,
         IReadOnlyDictionary<string, object?>? details = null)
     {
+        return AddEvent(eventType, connection.ConnectionId, connection.ClientId, message, details);
+    }
+
+    private HubEvent AddEvent(
+        string eventType,
+        string connectionId,
+        string clientId,
+        string message,
+        IReadOnlyDictionary<string, object?>? details = null)
+    {
         var hubEvent = new HubEvent(
             Interlocked.Increment(ref _eventId),
             DateTimeOffset.UtcNow,
             eventType,
-            connection.ConnectionId,
-            connection.ClientId,
+            connectionId,
+            clientId,
             message,
             details);
 
@@ -316,6 +337,18 @@ public sealed class ConnectionTracker
     private static string FirstValue(params string?[] values)
     {
         return values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim() ?? "";
+    }
+
+    private static IReadOnlyDictionary<string, object?>? RequestDetails(ClientConnection connection)
+    {
+        return RequestDetails(connection.RequestDiagnostics);
+    }
+
+    private static IReadOnlyDictionary<string, object?>? RequestDetails(RequestDiagnostics? requestDiagnostics)
+    {
+        return requestDiagnostics is null
+            ? null
+            : new Dictionary<string, object?> { ["request"] = requestDiagnostics };
     }
 
     private static string TrimForLog(string value)

@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.1] - 2026-06-05
+
+### Added
+
+- Add sanitized request header, cookie, and query diagnostics to monitor server event logs for negotiate and connection events.
+
 ## [0.3.0] - 2026-06-05
 
 ### Added

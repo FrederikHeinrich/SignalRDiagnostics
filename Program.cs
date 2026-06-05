@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.SignalR;
 using SignalRDiagnostics.Hubs;
 using SignalRDiagnostics.Services;
 
@@ -45,8 +46,22 @@ app.UseCors("DiagnosticsCors");
 app.MapGet("/", () => Results.Redirect("client"));
 app.MapGet("/client", () => HtmlPage(app, "client.html"));
 app.MapGet("/monitor", () => HtmlPage(app, "monitor.html"));
-app.MapGet("/testHub/negotiate", (HttpContext context) =>
+app.MapGet("/testHub/negotiate", async (
+    HttpContext context,
+    ConnectionTracker tracker,
+    IHubContext<TestHub> hubContext) =>
 {
+    var requestDiagnostics = RequestDiagnosticsBuilder.From(context);
+    var hubEvent = tracker.RecordHttpRequest(
+        "negotiate",
+        context.TraceIdentifier,
+        requestDiagnostics?.RemoteIpAddress ?? "http-client",
+        "Diagnostic negotiate requested",
+        requestDiagnostics);
+
+    await hubContext.Clients.Group(HubGroups.Monitors).SendAsync("ServerEvent", hubEvent);
+    await hubContext.Clients.Group(HubGroups.Monitors).SendAsync("MonitorUpdate", tracker.GetSnapshot());
+
     return Results.Json(new
     {
         diagnosticOnly = true,

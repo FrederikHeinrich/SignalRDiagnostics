@@ -21,7 +21,8 @@
 
   connection.on("MonitorUpdate", renderSnapshot);
   connection.on("ServerEvent", (event) => {
-    log(`${event.eventType.toUpperCase()} ${event.clientId}: ${event.message}`);
+    const details = formatEventDetails(event.details);
+    log(`${event.eventType.toUpperCase()} ${event.clientId}: ${event.message}${details ? `\n${details}` : ""}`);
   });
 
   connection.onreconnecting((error) => {
@@ -96,6 +97,44 @@
 
   function log(message) {
     d.appendLog(elements.log, message, state.log);
+  }
+
+  function formatEventDetails(details) {
+    if (!details || Object.keys(details).length === 0) {
+      return "";
+    }
+
+    if (details.request) {
+      return formatRequestDetails(details.request);
+    }
+
+    return d.safeJson(details)
+      .split("\n")
+      .map((line) => `  ${line}`)
+      .join("\n");
+  }
+
+  function formatRequestDetails(request) {
+    const target = `${request.scheme || "-"}://${request.host || "-"}${request.pathBase || ""}${request.path || ""}`;
+    const lines = [
+      `  Request: ${request.method || "-"} ${target}`,
+      `  Remote IP: ${request.remoteIpAddress || "-"}`,
+      `  Query: ${request.queryString || "-"}`
+    ];
+
+    lines.push(formatItems("Query parameters", request.queryParameters));
+    lines.push(formatItems("Headers", request.headers));
+    lines.push(formatItems("Cookies", request.cookies));
+
+    return lines.filter(Boolean).join("\n");
+  }
+
+  function formatItems(label, items) {
+    if (!Array.isArray(items) || items.length === 0) {
+      return `  ${label}: -`;
+    }
+
+    return `  ${label}:\n${items.map((item) => `    ${item.name}: ${item.value}`).join("\n")}`;
   }
 
   function escapeHtml(value) {
