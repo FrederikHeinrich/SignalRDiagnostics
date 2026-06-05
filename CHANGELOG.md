@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0] - 2026-06-05
+
+### Added
+
+- Add GitHub Actions build, publish artifact, and tag-based release workflow.
+- Add README instructions for creating release tags and deploying release ZIPs.
+
 ## [0.1.0] - 2026-06-05
 
 ### Added

@@ -42,6 +42,33 @@ dotnet ./publish/SignalRDiagnostics.dll
 
 For IIS, deploy the publish folder to the site root and ensure the ASP.NET Core Hosting Bundle for .NET 8 is installed on the server.
 
+## GitHub Actions Release
+
+The repository includes a GitHub Actions workflow at `.github/workflows/release.yml`.
+
+It runs on pushes and pull requests to `main`, publishes the app, and uploads a ZIP artifact for each workflow run. When a tag starting with `v` is pushed, it also creates or updates a GitHub Release and attaches the published ZIP.
+
+Create a release tag from PowerShell:
+
+```powershell
+$shortHash = git rev-parse --short=12 HEAD
+$version = (Get-Date).ToUniversalTime().ToString("yyyy.M.d-bHHmmss") + $shortHash
+git tag "v$version"
+git push origin "v$version"
+```
+
+After the workflow finishes, download the release asset named like:
+
+```text
+SignalRDiagnostics-YYYY.M.D-bHHMMSS<ShortHash>.zip
+```
+
+Deploy the ZIP contents to IIS, for example:
+
+```text
+C:\inetpub\SignalRDiagnostics
+```
+
 ## Test Through Azure Application Gateway
 
 Deploy the app behind the Application Gateway backend pool, then open:
