@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.5] - 2026-06-05
+
+### Changed
+
+- Compact the client diagnostics screen so connection state, ping/pong, message counts, and errors are visible before advanced auth tooling.
+- Show only the active authentication value field for the selected auth mode to avoid mixing cookie and bearer inputs.
+- Change the full test to run a transport/auth matrix across Auto, WebSockets, Server-Sent Events, Long Polling, None, Cookie, and Bearer modes.
+
 ## [0.3.4] - 2026-06-05
 
 ### Added

@@ -1,59 +1,43 @@
 (function () {
-  const reportState = { latest: null };
-
-  function elements() {
-    return {
-      copy: document.getElementById("copyReportButton"),
-      details: document.getElementById("fullTestReportDetails"),
-      download: document.getElementById("downloadReportButton"),
-      panel: document.getElementById("fullTestReportPanel"),
-      status: document.getElementById("fullTestReportStatus"),
-      summary: document.getElementById("fullTestReportSummary"),
-      text: document.getElementById("fullTestReportText")
-    };
-  }
-
-  function initialize() {
-    const ui = elements();
-    ui.copy?.addEventListener("click", copyReport);
-    ui.download?.addEventListener("click", downloadReport);
-  }
+  const transports = [
+    { label: "Auto", value: "auto" },
+    { label: "WebSockets", value: "webSockets" },
+    { label: "ServerSentEvents", value: "serverSentEvents" },
+    { label: "LongPolling", value: "longPolling" }
+  ];
+  const authModes = [
+    { label: "None", value: "none" },
+    { label: "Cookie", value: "cookie" },
+    { label: "Bearer", value: "bearer" }
+  ];
 
   async function run(context) {
     const { d, elements: form, methods, state } = context;
     const session = createSession(d, form);
-    renderRunning(session);
+    const original = snapshotControls(form);
+    const report = window.FullTestReport;
+    report.renderRunning(session);
     state.fullTestCancel = false;
-    methods.resetCounters();
+    ensureCredentials(form);
 
     try {
-      session.negotiate = await methods.testNegotiate();
-      session.connection = await methods.connect();
-      session.echo = await methods.sendMessage();
-
-      methods.log(`Full test started for ${session.config.durationSeconds} seconds.`);
-      session.pings.push(await methods.invokePing());
-
-      const endAt = Date.now() + session.config.durationSeconds * 1000;
-      while (!state.fullTestCancel && Date.now() < endAt) {
-        await delay(session.config.pingIntervalSeconds * 1000);
-        if (!state.fullTestCancel && Date.now() < endAt) {
-          session.pings.push(await methods.invokePing());
+      for (const scenario of session.scenarios) {
+        if (state.fullTestCancel) {
+          break;
         }
+
+        await runScenario({ form, methods, scenario, session, state });
+        report.renderRunning(session);
       }
 
       session.cancelled = state.fullTestCancel;
-      methods.log(session.cancelled ? "Full test cancelled." : "Full test completed.");
+      methods.log(session.cancelled ? "Full test matrix cancelled." : "Full test matrix completed.");
     } catch (error) {
       session.errors.push(error?.message || String(error));
       methods.recordError(error);
     } finally {
       session.endedAt = new Date();
-      session.counters = {
-        lastError: state.lastError,
-        received: state.received,
-        sent: state.sent
-      };
+      session.counters = report.summarizeCounters(session.scenarios);
 
       try {
         if (state.connection) {
@@ -63,192 +47,187 @@
         session.errors.push(`Disconnect failed: ${error?.message || String(error)}`);
       }
 
-      renderComplete(session);
+      restoreControls(form, original);
+      report.renderComplete(session);
+    }
+  }
+
+  async function runScenario(context) {
+    const { form, methods, scenario, session, state } = context;
+    const startedAt = new Date();
+    methods.resetCounters();
+    applyScenario(form, scenario);
+    methods.log(`Full test scenario ${scenario.index}/${session.scenarios.length}: ${scenario.transportLabel} + ${scenario.authLabel}`);
+
+    try {
+      await methods.disconnect(false, false);
+      scenario.negotiate = await safeStep("negotiate", scenario, methods, () => methods.testNegotiate());
+      scenario.connection = await safeStep("connect", scenario, methods, () => methods.connect());
+
+      if (scenario.connection?.ok && !state.fullTestCancel) {
+        scenario.echo = await safeStep("echo", scenario, methods, () => methods.sendMessage());
+        await runScenarioPings({ methods, scenario, state });
+      }
+    } finally {
+      scenario.endedAt = new Date();
+      scenario.durationSeconds = Math.round((scenario.endedAt - startedAt) / 1000);
+      scenario.counters = { received: state.received, sent: state.sent };
+      if (state.lastError && state.lastError !== "-") {
+        scenario.warnings.push(state.lastError);
+      }
+
+      try {
+        if (state.connection) {
+          await methods.disconnect(false, false);
+        }
+      } catch (error) {
+        scenario.errors.push(`Disconnect failed: ${error?.message || String(error)}`);
+      }
+
+      scenario.status = statusForScenario(scenario, state.fullTestCancel);
+    }
+  }
+
+  async function runScenarioPings(context) {
+    const { methods, scenario, state } = context;
+    const endAt = Date.now() + scenario.holdSeconds * 1000;
+    scenario.pings.push(await safeStep("ping", scenario, methods, () => methods.invokePing()));
+
+    while (!state.fullTestCancel && Date.now() < endAt) {
+      const remaining = endAt - Date.now();
+      await delay(Math.min(scenario.pingIntervalSeconds * 1000, remaining));
+      if (!state.fullTestCancel && Date.now() < endAt) {
+        scenario.pings.push(await safeStep("ping", scenario, methods, () => methods.invokePing()));
+      }
+    }
+  }
+
+  async function safeStep(stepName, scenario, methods, action) {
+    try {
+      const result = await action();
+      if (!result?.ok) {
+        scenario.errors.push(`${stepName}: ${result?.error || "not ok"}`);
+      }
+
+      return result;
+    } catch (error) {
+      const message = error?.message || String(error);
+      scenario.errors.push(`${stepName}: ${message}`);
+      methods.recordError(error);
+      return { error: message, ok: false };
     }
   }
 
   function createSession(d, form) {
+    const durationSeconds = d.numberValue(form.durationSeconds, 60);
+    const pingIntervalSeconds = d.numberValue(form.pingIntervalSeconds, 5);
+    const scenarios = createScenarios(durationSeconds, pingIntervalSeconds);
+
     return {
       cancelled: false,
       config: {
-        authMode: selectedText(form.authMode),
         baseUrl: form.baseUrl.value,
-        durationSeconds: d.numberValue(form.durationSeconds, 60),
+        durationSeconds,
         hubPath: form.hubPath.value,
-        pingIntervalSeconds: d.numberValue(form.pingIntervalSeconds, 5),
-        testMessage: form.testMessage.value,
-        transportMode: selectedText(form.transportMode)
+        pingIntervalSeconds,
+        scenarioCount: scenarios.length,
+        testMessage: form.testMessage.value
       },
-      counters: { lastError: "-", received: 0, sent: 0 },
-      echo: null,
+      counters: { received: 0, sent: 0 },
       endedAt: null,
       errors: [],
       id: crypto.randomUUID(),
-      negotiate: null,
-      connection: null,
-      pings: [],
+      scenarios,
       startedAt: new Date()
     };
   }
 
-  function renderRunning(session) {
-    const ui = elements();
-    if (!ui.panel) {
-      return;
-    }
+  function createScenarios(durationSeconds, pingIntervalSeconds) {
+    const count = transports.length * authModes.length;
+    const holdSeconds = Math.max(1, Math.round(durationSeconds / count));
+    let index = 1;
 
-    ui.panel.hidden = false;
-    ui.status.textContent = "Running";
-    ui.summary.textContent = `Full test started at ${session.startedAt.toLocaleString()}.`;
-    ui.details.innerHTML = "";
-    ui.text.textContent = "Report will be available when the full test finishes.";
+    return transports.flatMap((transport) => authModes.map((auth) => ({
+      authLabel: auth.label,
+      authValue: auth.value,
+      connection: null,
+      counters: { received: 0, sent: 0 },
+      durationSeconds: 0,
+      echo: null,
+      endedAt: null,
+      errors: [],
+      holdSeconds,
+      index: index++,
+      negotiate: null,
+      pingIntervalSeconds,
+      pings: [],
+      status: "Pending",
+      transportLabel: transport.label,
+      transportValue: transport.value,
+      warnings: []
+    })));
   }
 
-  function renderComplete(session) {
-    const ui = elements();
-    const report = buildReport(session);
-    reportState.latest = report;
-
-    if (!ui.panel) {
-      return;
+  function ensureCredentials(form) {
+    if (!form.cookieValue.value.trim()) {
+      form.cookieValue.value = document.getElementById("builtCookieInput")?.value.trim() || "DiagCookie=diagnostic-cookie";
     }
 
-    ui.panel.hidden = false;
-    ui.status.textContent = report.status;
-    ui.summary.textContent = report.summary;
-    ui.details.innerHTML = report.items.map(renderItem).join("");
-    ui.text.textContent = report.text;
+    if (!form.bearerToken.value.trim()) {
+      form.bearerToken.value = document.getElementById("generatedBearerToken")?.value.trim() || `diag_${crypto.randomUUID().replaceAll("-", "")}`;
+    }
+
+    dispatch(form.cookieValue, "input");
+    dispatch(form.bearerToken, "input");
   }
 
-  function buildReport(session) {
-    const pingStats = summarizePings(session.pings);
-    const durationSeconds = Math.round((session.endedAt - session.startedAt) / 1000);
-    const status = statusFor(session, pingStats);
-    const summary = `${status}: ${pingStats.count} ping roundtrip(s), ${durationSeconds}s runtime, ${session.errors.length} error(s).`;
-    const items = [
-      ["Started", session.startedAt.toLocaleString()],
-      ["Ended", session.endedAt.toLocaleString()],
-      ["Runtime", `${durationSeconds}s`],
-      ["Target", `${session.config.baseUrl}${session.config.hubPath}`],
-      ["Trace id", traceIds(session)],
-      ["Transport", session.config.transportMode],
-      ["Auth", session.config.authMode],
-      ["Negotiate", session.negotiate?.ok ? `${session.negotiate.status} in ${session.negotiate.durationMs} ms` : errorText(session.negotiate)],
-      ["Connection", session.connection?.ok ? session.connection.connectionId : errorText(session.connection)],
-      ["Echo", session.echo?.ok ? `${session.echo.durationMs} ms` : errorText(session.echo)],
-      ["Pings", `${pingStats.count} ok, avg ${pingStats.averageMs} ms`],
-      ["Min / Max ping", `${pingStats.minMs} / ${pingStats.maxMs} ms`],
-      ["Messages", `${session.counters.sent} sent, ${session.counters.received} received`],
-      ["Last error", session.counters.lastError || "-"],
-      ["Cancelled", session.cancelled ? "Yes" : "No"]
-    ];
+  function applyScenario(form, scenario) {
+    form.transportMode.value = scenario.transportValue;
+    form.authMode.value = scenario.authValue;
+    dispatch(form.transportMode, "change");
+    dispatch(form.authMode, "change");
+  }
 
+  function snapshotControls(form) {
     return {
-      generatedAt: new Date().toISOString(),
-      id: session.id,
-      items,
-      json: { durationSeconds, pingStats, session, status },
-      status,
-      summary,
-      text: textReport(status, summary, items, session.errors)
+      authMode: form.authMode.value,
+      bearerToken: form.bearerToken.value,
+      cookieValue: form.cookieValue.value,
+      transportMode: form.transportMode.value
     };
   }
 
-  function statusFor(session, pingStats) {
-    if (session.errors.length > 0 || session.counters.lastError !== "-") {
-      return "Failed";
-    }
+  function restoreControls(form, original) {
+    form.transportMode.value = original.transportMode;
+    form.authMode.value = original.authMode;
+    form.cookieValue.value = original.cookieValue;
+    form.bearerToken.value = original.bearerToken;
+    dispatch(form.transportMode, "change");
+    dispatch(form.authMode, "change");
+    dispatch(form.cookieValue, "input");
+    dispatch(form.bearerToken, "input");
+  }
 
-    if (session.cancelled) {
+  function statusForScenario(scenario, cancelled) {
+    if (cancelled) {
       return "Cancelled";
     }
 
-    return session.negotiate?.ok && session.connection?.ok && session.echo?.ok && pingStats.count > 0
-      ? "Passed"
-      : "Warning";
-  }
-
-  function traceIds(session) {
-    return [
-      session.negotiate?.diagnostics?.traceId,
-      session.connection?.diagnostics?.traceId
-    ].filter(Boolean).join(" / ") || "-";
-  }
-
-  function summarizePings(pings) {
-    const values = pings.filter((ping) => ping?.ok).map((ping) => ping.durationMs);
-    const total = values.reduce((sum, value) => sum + value, 0);
-
-    return {
-      averageMs: values.length ? Math.round(total / values.length) : 0,
-      count: values.length,
-      maxMs: values.length ? Math.max(...values) : 0,
-      minMs: values.length ? Math.min(...values) : 0
-    };
-  }
-
-  function textReport(status, summary, items, errors) {
-    const lines = [
-      "SignalR Diagnostics Full Test Report",
-      `Status: ${status}`,
-      summary,
-      "",
-      ...items.map(([key, value]) => `${key}: ${value}`)
-    ];
-
-    if (errors.length > 0) {
-      lines.push("", "Errors:", ...errors.map((error) => `- ${error}`));
+    const pingStats = window.FullTestReport.summarizePings(scenario.pings);
+    if (scenario.errors.length > 0 || !scenario.negotiate?.ok || !scenario.connection?.ok || !scenario.echo?.ok) {
+      return "Failed";
     }
 
-    return lines.join("\n");
+    return pingStats.count > 0 ? "Passed" : "Warning";
   }
 
-  async function copyReport() {
-    if (!reportState.latest) {
-      return;
-    }
-
-    await navigator.clipboard.writeText(reportState.latest.text);
-  }
-
-  function downloadReport() {
-    if (!reportState.latest) {
-      return;
-    }
-
-    const blob = new Blob([JSON.stringify(reportState.latest.json, null, 2)], { type: "application/json" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `signalr-diagnostics-report-${reportState.latest.id}.json`;
-    link.click();
-    URL.revokeObjectURL(link.href);
-  }
-
-  function renderItem([key, value]) {
-    return `<div class="report-item"><span>${escapeHtml(key)}</span><strong>${escapeHtml(value)}</strong></div>`;
-  }
-
-  function errorText(result) {
-    return result?.error || "not completed";
-  }
-
-  function selectedText(select) {
-    return select.options[select.selectedIndex].text;
-  }
-
-  function escapeHtml(value) {
-    return String(value ?? "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
+  function dispatch(element, type) {
+    element.dispatchEvent(new Event(type, { bubbles: true }));
   }
 
   function delay(ms) {
     return new Promise((resolve) => window.setTimeout(resolve, ms));
   }
 
-  initialize();
   window.FullTestRunner = { run };
 })();

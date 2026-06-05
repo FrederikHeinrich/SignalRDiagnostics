@@ -1,0 +1,291 @@
+.app-shell {
+  gap: 12px;
+  padding-top: 14px;
+}
+
+.tool-panel {
+  padding: 14px;
+  box-shadow: none;
+}
+
+.panel-title {
+  margin-bottom: 10px;
+}
+
+.compact-status {
+  grid-template-columns: minmax(130px, 1fr) minmax(110px, 0.9fr) minmax(130px, 1fr) minmax(145px, 1fr) minmax(220px, 1.7fr);
+  gap: 10px;
+}
+
+.compact-status .wide {
+  grid-column: auto;
+}
+
+.compact-status .metric-card {
+  min-height: 68px;
+  padding: 11px 12px;
+  box-shadow: none;
+}
+
+.compact-status .metric-card span {
+  font-size: 0.76rem;
+}
+
+.compact-status .metric-card strong {
+  margin-top: 5px;
+  font-size: 0.98rem;
+}
+
+.compact-status .metric-card strong span {
+  display: inline;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.metric-card small {
+  display: block;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.25;
+}
+
+.metric-card.is-good {
+  border-color: rgba(20, 125, 67, 0.45);
+  background: #f2fbf6;
+}
+
+.metric-card.is-warning {
+  border-color: rgba(161, 92, 0, 0.45);
+  background: #fff8ec;
+}
+
+.metric-card.is-bad {
+  border-color: rgba(180, 35, 24, 0.45);
+  background: #fff5f4;
+}
+
+.metric-card.is-idle {
+  background: #fbfcfd;
+}
+
+.form-grid {
+  gap: 10px;
+}
+
+label {
+  gap: 4px;
+}
+
+label span {
+  font-size: 0.8rem;
+}
+
+input,
+select,
+button {
+  min-height: 36px;
+}
+
+input,
+select {
+  padding: 7px 9px;
+}
+
+.button-bar {
+  gap: 8px;
+  margin-top: 12px;
+}
+
+button {
+  padding: 7px 10px;
+}
+
+.pill.is-good {
+  background: #e7f7ee;
+  color: var(--success);
+}
+
+.pill.is-warning {
+  background: #fff1d6;
+  color: var(--warning);
+}
+
+.pill.is-bad {
+  background: #ffe5e2;
+  color: var(--danger);
+}
+
+.auth-tools-panel {
+  padding: 0;
+}
+
+.auth-tools-panel > summary {
+  cursor: pointer;
+  list-style: none;
+  margin: 0;
+  padding: 14px;
+}
+
+.auth-tools-panel > summary::-webkit-details-marker,
+.advanced-fields > summary::-webkit-details-marker {
+  display: none;
+}
+
+.auth-tools-panel > summary::before {
+  content: "+";
+  width: 20px;
+  color: var(--accent-strong);
+  font-weight: 800;
+}
+
+.auth-tools-panel[open] > summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.auth-tools-panel[open] > summary::before,
+.advanced-fields[open] > summary::before {
+  content: "-";
+}
+
+.auth-tools-panel > summary > span:first-of-type {
+  display: grid;
+  gap: 2px;
+  margin-right: auto;
+}
+
+.auth-tools-panel small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
+.auth-tools-grid {
+  gap: 14px;
+  padding: 14px;
+}
+
+.auth-tool {
+  align-content: start;
+  gap: 10px;
+}
+
+.auth-tool + .auth-tool {
+  border-left: 1px solid var(--line);
+  padding-left: 14px;
+}
+
+.advanced-fields {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+
+.advanced-fields > summary {
+  cursor: pointer;
+  color: var(--accent-strong);
+  font-size: 0.82rem;
+  font-weight: 750;
+  list-style: none;
+}
+
+.advanced-fields > summary::before {
+  content: "+";
+  display: inline-block;
+  width: 16px;
+}
+
+.advanced-fields .form-grid,
+.preview-fields label {
+  margin-top: 8px;
+}
+
+.auth-output {
+  min-height: 48px;
+  max-height: 96px;
+  padding: 8px;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.auth-actions {
+  gap: 8px;
+}
+
+.report-grid {
+  gap: 8px;
+}
+
+.report-item {
+  min-height: 58px;
+  padding: 8px;
+}
+
+.report-grid .scenario-table {
+  grid-column: 1 / -1;
+}
+
+.scenario-table {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.scenario-table table {
+  min-width: 760px;
+}
+
+.scenario-table td,
+.scenario-table th {
+  padding: 8px 10px;
+}
+
+.status-passed {
+  color: var(--success);
+}
+
+.status-failed {
+  color: var(--danger);
+}
+
+.status-warning,
+.status-cancelled,
+.status-pending {
+  color: var(--warning);
+}
+
+.log-view {
+  height: 300px;
+}
+
+@media (min-width: 901px) {
+  .auth-tools-grid,
+  .compact-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .compact-status {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .compact-status .wide {
+    grid-column: span 2;
+  }
+
+  .auth-tool + .auth-tool {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    padding-top: 14px;
+    padding-left: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .compact-status,
+  .compact-status .wide {
+    grid-template-columns: 1fr;
+    grid-column: span 1;
+  }
+}

@@ -6,11 +6,14 @@
   <title>SignalR Diagnostics Client</title>
   <link rel="stylesheet" href="css/site.css?v=20260605-log-wrap2">
   <link rel="stylesheet" href="css/auth-tools.css?v=20260605-auth-tools">
+  <link rel="stylesheet" href="css/client-compact.css?v=20260605-compact-client">
   <script src="lib/signalr/signalr.min.js"></script>
   <script src="js/common.js?v=20260605-log-format" defer></script>
   <script src="js/client-request-diagnostics.js?v=20260605-auth-tools" defer></script>
-  <script src="js/client-full-test.js" defer></script>
+  <script src="js/client-full-test-report.js?v=20260605-matrix-test" defer></script>
+  <script src="js/client-full-test.js?v=20260605-matrix-test" defer></script>
   <script src="js/auth-tools.js?v=20260605-auth-tools" defer></script>
+  <script src="js/client-visual-state.js?v=20260605-compact-client" defer></script>
   <script src="js/client.js?v=20260605-auth-tools" defer></script>
 </head>
 <body>
@@ -27,6 +30,31 @@
   </header>
 
   <main class="app-shell">
+    <section class="status-grid compact-status" aria-label="Live status">
+      <article class="metric-card signal-card">
+        <span>Connection</span>
+        <strong id="stateValue">Disconnected</strong>
+        <small id="transportValue">Auto / None</small>
+      </article>
+      <article class="metric-card">
+        <span>Runtime</span>
+        <strong id="runtimeValue">00:00</strong>
+        <small id="connectionIdValue">-</small>
+      </article>
+      <article class="metric-card">
+        <span>Ping / Pong</span>
+        <strong><span id="lastPingValue">-</span> / <span id="lastPongValue">-</span></strong>
+      </article>
+      <article class="metric-card">
+        <span>Messages</span>
+        <strong><span id="sentValue">0</span> sent / <span id="receivedValue">0</span> recv</strong>
+      </article>
+      <article class="metric-card error-card wide">
+        <span>Last error</span>
+        <strong id="lastErrorValue">-</strong>
+      </article>
+    </section>
+
     <section class="tool-panel">
       <div class="panel-title">
         <h2>Connection Setup</h2>
@@ -59,11 +87,11 @@
             <option value="bearer">Bearer Token</option>
           </select>
         </label>
-        <label>
+        <label class="auth-input-field" data-auth-field="cookie">
           <span>Cookie value</span>
           <input id="cookieValue" type="text" placeholder="name=value">
         </label>
-        <label>
+        <label class="auth-input-field" data-auth-field="bearer">
           <span>Bearer token value</span>
           <input id="bearerToken" type="password" autocomplete="off">
         </label>
@@ -91,11 +119,14 @@
       </div>
     </section>
 
-    <section class="tool-panel auth-tools-panel">
-      <div class="panel-title">
-        <h2>Auth Utilities</h2>
+    <details class="tool-panel auth-tools-panel">
+      <summary class="panel-title">
+        <span>
+          <h2>Auth Utilities</h2>
+          <small>Generate test tokens and cookies, then apply them to the auth fields above.</small>
+        </span>
         <span id="authToolsStatus" class="pill">Ready</span>
-      </div>
+      </summary>
 
       <div class="auth-tools-grid">
         <div class="auth-tool">
@@ -104,41 +135,48 @@
             <label>
               <span>Token format</span>
               <select id="bearerTokenFormat">
-                <option value="jwt-hs256">JWT-like HS256 test token</option>
-                <option value="jwt-none">Unsigned JWT alg none</option>
-                <option value="random">Opaque random token</option>
+                <option value="jwt-hs256">JWT HS256 test</option>
+                <option value="jwt-none">JWT alg none</option>
+                <option value="random">Opaque random</option>
               </select>
             </label>
             <label>
               <span>Lifetime minutes</span>
               <input id="bearerLifetimeMinutes" type="number" min="1" step="1" value="60">
             </label>
-            <label>
-              <span>Issuer</span>
-              <input id="bearerIssuer" type="text" value="SignalRDiagnostics">
-            </label>
-            <label>
-              <span>Audience</span>
-              <input id="bearerAudience" type="text" value="SignalRDiagnosticsGateway">
-            </label>
-            <label>
-              <span>Subject</span>
-              <input id="bearerSubject" type="text" value="diagnostic-client">
-            </label>
-            <label>
-              <span>Scope</span>
-              <input id="bearerScope" type="text" value="signalr.diagnostics">
-            </label>
-            <label class="wide">
-              <span>Roles comma-separated</span>
-              <input id="bearerRoles" type="text" value="Diagnostics,Tester">
-            </label>
           </div>
+
+          <details class="advanced-fields">
+            <summary>Token claims</summary>
+            <div class="form-grid compact-grid">
+              <label>
+                <span>Issuer</span>
+                <input id="bearerIssuer" type="text" value="SignalRDiagnostics">
+              </label>
+              <label>
+                <span>Audience</span>
+                <input id="bearerAudience" type="text" value="SignalRDiagnosticsGateway">
+              </label>
+              <label>
+                <span>Subject</span>
+                <input id="bearerSubject" type="text" value="diagnostic-client">
+              </label>
+              <label>
+                <span>Scope</span>
+                <input id="bearerScope" type="text" value="signalr.diagnostics">
+              </label>
+              <label class="wide">
+                <span>Roles comma-separated</span>
+                <input id="bearerRoles" type="text" value="Diagnostics,Tester">
+              </label>
+            </div>
+          </details>
+
           <textarea id="generatedBearerToken" class="auth-output" readonly spellcheck="false"></textarea>
           <div class="button-bar auth-actions">
-            <button id="generateBearerButton" type="button">Generate token</button>
-            <button id="applyBearerButton" type="button" class="secondary">Apply to Bearer</button>
-            <button id="copyBearerButton" type="button" class="secondary">Copy token</button>
+            <button id="generateBearerButton" type="button">Generate</button>
+            <button id="applyBearerButton" type="button" class="secondary">Use Bearer</button>
+            <button id="copyBearerButton" type="button" class="secondary">Copy</button>
           </div>
         </div>
 
@@ -147,96 +185,66 @@
           <div class="form-grid compact-grid">
             <label>
               <span>Name</span>
-              <input id="cookieBuilderName" type="text" value="SignalRDiagnosticsCookie">
+              <input id="cookieBuilderName" type="text" value="DiagCookie">
             </label>
             <label>
               <span>Value</span>
               <input id="cookieBuilderValue" type="text" value="diagnostic-cookie">
             </label>
-            <label>
-              <span>Path</span>
-              <input id="cookieBuilderPath" type="text" value="/">
-            </label>
-            <label>
-              <span>Domain optional</span>
-              <input id="cookieBuilderDomain" type="text" placeholder="example.com">
-            </label>
-            <label>
-              <span>SameSite</span>
-              <select id="cookieBuilderSameSite">
-                <option value="Lax">Lax</option>
-                <option value="Strict">Strict</option>
-                <option value="None">None</option>
-              </select>
-            </label>
-            <label>
-              <span>Max-Age seconds</span>
-              <input id="cookieBuilderMaxAge" type="number" min="1" step="1" value="3600">
-            </label>
-            <label class="check-label">
-              <input id="cookieBuilderSecure" type="checkbox">
-              <span>Secure</span>
-            </label>
-            <label class="check-label">
-              <input id="cookieBuilderHttpOnly" type="checkbox">
-              <span>HttpOnly preview</span>
-            </label>
           </div>
+
+          <details class="advanced-fields">
+            <summary>Cookie attributes</summary>
+            <div class="form-grid compact-grid">
+              <label>
+                <span>Path</span>
+                <input id="cookieBuilderPath" type="text" value="/">
+              </label>
+              <label>
+                <span>Domain optional</span>
+                <input id="cookieBuilderDomain" type="text" placeholder="example.com">
+              </label>
+              <label>
+                <span>SameSite</span>
+                <select id="cookieBuilderSameSite">
+                  <option value="Lax">Lax</option>
+                  <option value="Strict">Strict</option>
+                  <option value="None">None</option>
+                </select>
+              </label>
+              <label>
+                <span>Max-Age seconds</span>
+                <input id="cookieBuilderMaxAge" type="number" min="1" step="1" value="3600">
+              </label>
+              <label class="check-label">
+                <input id="cookieBuilderSecure" type="checkbox">
+                <span>Secure</span>
+              </label>
+              <label class="check-label">
+                <input id="cookieBuilderHttpOnly" type="checkbox">
+                <span>HttpOnly preview</span>
+              </label>
+            </div>
+          </details>
+
           <label class="auth-output-label">
             <span>Cookie input value</span>
             <textarea id="builtCookieInput" class="auth-output" readonly spellcheck="false"></textarea>
           </label>
-          <label class="auth-output-label">
-            <span>Set-Cookie preview</span>
-            <textarea id="builtSetCookie" class="auth-output" readonly spellcheck="false"></textarea>
-          </label>
+          <details class="advanced-fields preview-fields">
+            <summary>Set-Cookie preview</summary>
+            <label>
+              <textarea id="builtSetCookie" class="auth-output" readonly spellcheck="false"></textarea>
+            </label>
+          </details>
           <div class="button-bar auth-actions">
-            <button id="buildCookieButton" type="button">Build cookie</button>
-            <button id="applyCookieButton" type="button" class="secondary">Apply to Cookie</button>
-            <button id="copyCookieButton" type="button" class="secondary">Copy cookie</button>
+            <button id="buildCookieButton" type="button">Build</button>
+            <button id="applyCookieButton" type="button" class="secondary">Use Cookie</button>
+            <button id="copyCookieButton" type="button" class="secondary">Copy</button>
           </div>
         </div>
       </div>
-    </section>
-
-    <section class="status-grid" aria-label="Live status">
-      <article class="metric-card">
-        <span>Connection state</span>
-        <strong id="stateValue">Disconnected</strong>
-      </article>
-      <article class="metric-card">
-        <span>Selected transport/mode</span>
-        <strong id="transportValue">Auto / None</strong>
-      </article>
-      <article class="metric-card">
-        <span>Connection id</span>
-        <strong id="connectionIdValue">-</strong>
-      </article>
-      <article class="metric-card">
-        <span>Runtime</span>
-        <strong id="runtimeValue">00:00</strong>
-      </article>
-      <article class="metric-card">
-        <span>Last ping</span>
-        <strong id="lastPingValue">-</strong>
-      </article>
-      <article class="metric-card">
-        <span>Last pong</span>
-        <strong id="lastPongValue">-</strong>
-      </article>
-      <article class="metric-card">
-        <span>Messages sent</span>
-        <strong id="sentValue">0</strong>
-      </article>
-      <article class="metric-card">
-        <span>Messages received</span>
-        <strong id="receivedValue">0</strong>
-      </article>
-      <article class="metric-card wide">
-        <span>Last error</span>
-        <strong id="lastErrorValue">-</strong>
-      </article>
-    </section>
+    </details>
 
     <section id="fullTestReportPanel" class="tool-panel report-panel" hidden>
       <div class="panel-title">

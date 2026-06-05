@@ -120,11 +120,10 @@ Recommended test flow:
 2. Open `/client` in another browser tab through the gateway URL.
 3. Run `Test negotiate` and check HTTP status, response headers, duration, and body preview.
 4. Run `Test connect` with `Auto`.
-5. Repeat with `WebSockets only`, `ServerSentEvents only`, and `LongPolling only`.
-6. Run `Run full test` for at least 60 seconds.
-7. Watch `/monitor` for disconnects, stale pongs, suspicious clients, and server events.
+5. Run `Run full test` for at least 60 seconds.
+6. Watch `/monitor` for disconnects, stale pongs, suspicious clients, and server events.
 
-When the full test finishes, `/client` shows a completion report with target settings, selected transport and authentication mode, negotiate result, connection id, echo timing, ping statistics, message counters, last error, and copy/download actions.
+When the full test finishes, `/client` shows a matrix report for all transport and authentication combinations: `Auto`, `WebSockets`, `ServerSentEvents`, and `LongPolling` against `None`, `Cookie`, and `Bearer`. Each scenario records negotiate result, connection id, echo timing, ping statistics, message counters, errors, and copy/download actions.
 
 The `/client` page includes Auth Utilities for generating diagnostic bearer tokens and building cookie input values. Generated JWT-like tokens are intentionally for transport and routing tests only; they are not signed with a real production key and should not be treated as trusted identity tokens.
 
