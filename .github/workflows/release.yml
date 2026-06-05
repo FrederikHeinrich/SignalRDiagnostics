@@ -50,15 +50,26 @@ jobs:
       - name: Build
         run: dotnet build --configuration Release --no-restore
 
-      - name: Publish
-        run: dotnet publish --configuration Release --no-build --output ./publish
+      - name: Publish portable build
+        run: dotnet publish --configuration Release --no-build --output ./publish/portable
+
+      - name: Publish Windows self-contained build
+        run: >
+          dotnet publish
+          --configuration Release
+          --runtime win-x64
+          --self-contained true
+          --output ./publish/win-x64-self-contained
+          /p:PublishSingleFile=false
 
       - name: Package publish output
         shell: bash
         run: |
           mkdir -p artifacts
-          cd publish
-          zip -r "../artifacts/SignalRDiagnostics-${BUILD_VERSION}.zip" .
+          cd publish/portable
+          zip -r "../../artifacts/SignalRDiagnostics-portable-${BUILD_VERSION}.zip" .
+          cd ../win-x64-self-contained
+          zip -r "../../artifacts/SignalRDiagnostics-win-x64-self-contained-${BUILD_VERSION}.zip" .
 
       - name: Upload publish artifact
         uses: actions/upload-artifact@v7

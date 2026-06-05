@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1] - 2026-06-05
+
+### Added
+
+- Add Windows `win-x64` self-contained release ZIP for IIS servers with runtime loading issues.
+- Add README troubleshooting for `Failed to load ASP.NET Core runtime`.
+
 ## [0.2.0] - 2026-06-05
 
 ### Added

@@ -42,6 +42,14 @@ dotnet ./publish/SignalRDiagnostics.dll
 
 For IIS, deploy the publish folder to the site root and ensure the ASP.NET Core Hosting Bundle for .NET 8 is installed on the server.
 
+Publish a Windows self-contained build when the target server should not depend on an installed .NET runtime:
+
+```bash
+dotnet publish -c Release -r win-x64 --self-contained true -o ./publish-win-x64
+```
+
+For IIS, deploy the `publish-win-x64` folder to the site root. IIS still needs the ASP.NET Core Hosting Bundle because it provides the ASP.NET Core Module for IIS, but the app runtime itself is included in the publish output.
+
 ## GitHub Actions Release
 
 The repository includes a GitHub Actions workflow at `.github/workflows/release.yml`.
@@ -57,16 +65,37 @@ git tag "v$version"
 git push origin "v$version"
 ```
 
-After the workflow finishes, download the release asset named like:
+After the workflow finishes, download one of the release assets:
 
 ```text
-SignalRDiagnostics-YYYY.M.D-bHHMMSS<ShortHash>.zip
+SignalRDiagnostics-portable-YYYY.M.D-bHHMMSS<ShortHash>.zip
+SignalRDiagnostics-win-x64-self-contained-YYYY.M.D-bHHMMSS<ShortHash>.zip
 ```
+
+Use `portable` when the Windows Server has the .NET 8 ASP.NET Core Hosting Bundle installed. Use `win-x64-self-contained` when the server reports runtime loading errors or when you want the app runtime included in the deployment.
 
 Deploy the ZIP contents to IIS, for example:
 
 ```text
 C:\inetpub\SignalRDiagnostics
+```
+
+## IIS Runtime Troubleshooting
+
+If IIS shows `Failed to load ASP.NET Core runtime`, check these items first:
+
+1. Install or repair the .NET 8 ASP.NET Core Hosting Bundle on the Windows Server.
+2. Run `iisreset` after installing or repairing the Hosting Bundle.
+3. Set the IIS application pool to `No Managed Code`.
+4. Verify that the deployed folder contains the generated `web.config`.
+5. If you used the portable release ZIP, confirm `dotnet --list-runtimes` includes `Microsoft.AspNetCore.App 8.x`.
+6. If the server runtime cannot be changed, deploy the `win-x64-self-contained` release ZIP instead.
+
+Useful server commands:
+
+```powershell
+dotnet --list-runtimes
+iisreset
 ```
 
 ## Test Through Azure Application Gateway
