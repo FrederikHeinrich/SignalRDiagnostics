@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SignalR Diagnostics Client</title>
+  <link rel="stylesheet" href="/css/site.css">
+  <script src="/lib/signalr/signalr.min.js"></script>
+  <script src="/js/common.js" defer></script>
+  <script src="/js/client.js" defer></script>
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <h1>SignalR Diagnostics</h1>
+      <p>Client</p>
+    </div>
+    <nav aria-label="Primary">
+      <a href="/client" aria-current="page">Client</a>
+      <a href="/monitor">Monitor</a>
+      <a href="/api/health">Health</a>
+    </nav>
+  </header>
+
+  <main class="app-shell">
+    <section class="tool-panel">
+      <div class="panel-title">
+        <h2>Connection Setup</h2>
+        <span id="busyLabel" class="pill">Idle</span>
+      </div>
+
+      <div class="form-grid">
+        <label>
+          <span>Server Base URL</span>
+          <input id="baseUrl" type="url" autocomplete="url">
+        </label>
+        <label>
+          <span>Hub Path</span>
+          <input id="hubPath" type="text" value="/testHub">
+        </label>
+        <label>
+          <span>Transport mode</span>
+          <select id="transportMode">
+            <option value="auto">Auto</option>
+            <option value="webSockets">WebSockets only</option>
+            <option value="serverSentEvents">ServerSentEvents only</option>
+            <option value="longPolling">LongPolling only</option>
+          </select>
+        </label>
+        <label>
+          <span>Auth mode</span>
+          <select id="authMode">
+            <option value="none">None</option>
+            <option value="cookie">Cookie</option>
+            <option value="bearer">Bearer Token</option>
+          </select>
+        </label>
+        <label>
+          <span>Cookie value</span>
+          <input id="cookieValue" type="text" placeholder="name=value">
+        </label>
+        <label>
+          <span>Bearer token value</span>
+          <input id="bearerToken" type="password" autocomplete="off">
+        </label>
+        <label>
+          <span>Test duration seconds</span>
+          <input id="durationSeconds" type="number" min="1" step="1" value="60">
+        </label>
+        <label>
+          <span>Ping interval seconds</span>
+          <input id="pingIntervalSeconds" type="number" min="1" step="1" value="5">
+        </label>
+        <label class="wide">
+          <span>Test message</span>
+          <input id="testMessage" type="text" value="Hello from SignalR diagnostics">
+        </label>
+      </div>
+
+      <div class="button-bar">
+        <button id="negotiateButton" type="button">Test negotiate</button>
+        <button id="connectButton" type="button">Test connect</button>
+        <button id="sendButton" type="button">Send message</button>
+        <button id="fullTestButton" type="button">Run full test</button>
+        <button id="disconnectButton" type="button" class="secondary">Disconnect</button>
+        <button id="clearButton" type="button" class="secondary">Clear log</button>
+      </div>
+    </section>
+
+    <section class="status-grid" aria-label="Live status">
+      <article class="metric-card">
+        <span>Connection state</span>
+        <strong id="stateValue">Disconnected</strong>
+      </article>
+      <article class="metric-card">
+        <span>Selected transport/mode</span>
+        <strong id="transportValue">Auto / None</strong>
+      </article>
+      <article class="metric-card">
+        <span>Connection id</span>
+        <strong id="connectionIdValue">-</strong>
+      </article>
+      <article class="metric-card">
+        <span>Runtime</span>
+        <strong id="runtimeValue">00:00</strong>
+      </article>
+      <article class="metric-card">
+        <span>Last ping</span>
+        <strong id="lastPingValue">-</strong>
+      </article>
+      <article class="metric-card">
+        <span>Last pong</span>
+        <strong id="lastPongValue">-</strong>
+      </article>
+      <article class="metric-card">
+        <span>Messages sent</span>
+        <strong id="sentValue">0</strong>
+      </article>
+      <article class="metric-card">
+        <span>Messages received</span>
+        <strong id="receivedValue">0</strong>
+      </article>
+      <article class="metric-card wide">
+        <span>Last error</span>
+        <strong id="lastErrorValue">-</strong>
+      </article>
+    </section>
+
+    <section class="tool-panel">
+      <div class="panel-title">
+        <h2>Live Log</h2>
+        <span id="logCount" class="pill">0 entries</span>
+      </div>
+      <pre id="log" class="log-view" aria-live="polite"></pre>
+    </section>
+  </main>
+</body>
+</html>

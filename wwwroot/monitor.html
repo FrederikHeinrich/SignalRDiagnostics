@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SignalR Diagnostics Monitor</title>
+  <link rel="stylesheet" href="/css/site.css">
+  <script src="/lib/signalr/signalr.min.js"></script>
+  <script src="/js/common.js" defer></script>
+  <script src="/js/monitor.js" defer></script>
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <h1>SignalR Diagnostics</h1>
+      <p>Monitor</p>
+    </div>
+    <nav aria-label="Primary">
+      <a href="/client">Client</a>
+      <a href="/monitor" aria-current="page">Monitor</a>
+      <a href="/api/health">Health</a>
+    </nav>
+  </header>
+
+  <main class="app-shell">
+    <section class="status-grid" aria-label="Server metrics">
+      <article class="metric-card">
+        <span>Current connections</span>
+        <strong id="currentConnections">0</strong>
+      </article>
+      <article class="metric-card">
+        <span>Total connections</span>
+        <strong id="totalConnections">0</strong>
+      </article>
+      <article class="metric-card">
+        <span>Total disconnects</span>
+        <strong id="totalDisconnects">0</strong>
+      </article>
+      <article class="metric-card">
+        <span>Messages sent</span>
+        <strong id="messagesSent">0</strong>
+      </article>
+      <article class="metric-card">
+        <span>Messages received</span>
+        <strong id="messagesReceived">0</strong>
+      </article>
+      <article class="metric-card">
+        <span>Average session duration</span>
+        <strong id="averageSessionDuration">0s</strong>
+      </article>
+    </section>
+
+    <section class="tool-panel">
+      <div class="panel-title">
+        <h2>Active Clients</h2>
+        <span id="monitorState" class="pill">Connecting</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Client id</th>
+              <th>Connection id</th>
+              <th>Connected since</th>
+              <th>Last ping</th>
+              <th>Last pong</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="clientsTable">
+            <tr>
+              <td colspan="6" class="empty-cell">No active clients</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="tool-panel">
+      <div class="panel-title">
+        <h2>Server Event Log</h2>
+        <button id="clearMonitorLog" type="button" class="secondary compact">Clear log</button>
+      </div>
+      <pre id="monitorLog" class="log-view" aria-live="polite"></pre>
+    </section>
+  </main>
+</body>
+</html>
