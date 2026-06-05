@@ -124,6 +124,8 @@ Recommended test flow:
 6. Run `Run full test` for at least 60 seconds.
 7. Watch `/monitor` for disconnects, stale pongs, suspicious clients, and server events.
 
+When the full test finishes, `/client` shows a completion report with target settings, selected transport and authentication mode, negotiate result, connection id, echo timing, ping statistics, message counters, last error, and copy/download actions.
+
 Example gateway URLs:
 
 - `https://diag.example.com/client`

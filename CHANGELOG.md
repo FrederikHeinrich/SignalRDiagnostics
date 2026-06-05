@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.0] - 2026-06-05
+
+### Added
+
+- Add a full test completion report with timing, target, transport, auth, negotiate, connection, echo, ping, message, error, copy, and JSON download details.
+
 ## [0.2.3] - 2026-06-05
 
 ### Fixed

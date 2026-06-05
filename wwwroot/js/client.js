@@ -89,9 +89,19 @@
       log(`Negotiate duration: ${elapsed} ms`);
       log(`Response headers:\n${d.formatHeaders(response.headers) || "(none visible)"}`);
       log(`Body preview:\n${body.slice(0, 4000) || "(empty)"}`);
+      return {
+        bodyPreview: body.slice(0, 4000),
+        durationMs: elapsed,
+        headers: Object.fromEntries(response.headers.entries()),
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText,
+        url: url.href
+      };
     } catch (error) {
       recordError(error);
       log("Negotiate failed. Browser CORS, TLS, WAF, routing, or backend availability can all block this request.");
+      return { durationMs: Math.round(performance.now() - started), error: error?.message || String(error), ok: false, url: url.href };
     }
   }
 
@@ -100,6 +110,7 @@
 
     const hubUrl = d.buildHubUrl(elements.baseUrl.value, elements.hubPath.value);
     const options = signalROptions(hubUrl);
+    const started = performance.now();
     const connection = new signalR.HubConnectionBuilder()
       .withUrl(hubUrl.href, options)
       .configureLogging(signalR.LogLevel.Information)
@@ -125,6 +136,7 @@
 
     log(`Connected. Connection id: ${connection.connectionId || "(not exposed)"}`);
     updateStatus();
+    return { connectionId: connection.connectionId || "", durationMs: Math.round(performance.now() - started), ok: true, url: hubUrl.href };
   }
 
   function registerHandlers(connection) {
@@ -186,32 +198,19 @@
     countSent();
     log(`Echo send: ${message}`);
     const result = await connection.invoke("Echo", message);
+    const elapsed = Math.round(performance.now() - started);
     countReceived();
-    log(`Echo result in ${Math.round(performance.now() - started)} ms:\n${d.safeJson(result)}`);
+    log(`Echo result in ${elapsed} ms:\n${d.safeJson(result)}`);
+    return { durationMs: elapsed, ok: true, result };
   }
 
   async function runFullTest() {
-    state.fullTestCancel = false;
-    resetCounters();
-    await testNegotiate();
-    await connect();
-    await sendMessage();
-
-    const duration = d.numberValue(elements.durationSeconds, 60);
-    const interval = d.numberValue(elements.pingIntervalSeconds, 5);
-    const endAt = Date.now() + duration * 1000;
-
-    log(`Full test started for ${duration} seconds.`);
-    await invokePing();
-
-    state.interval = window.setInterval(() => {
-      if (state.fullTestCancel || Date.now() >= endAt) {
-        finishFullTest();
-        return;
-      }
-
-      invokePing().catch(recordError);
-    }, interval * 1000);
+    return window.FullTestRunner.run({
+      d,
+      elements,
+      methods: { connect, disconnect, invokePing, log, recordError, resetCounters, sendMessage, testNegotiate },
+      state
+    });
   }
 
   async function invokePing() {
@@ -221,16 +220,11 @@
     countSent();
     d.setText("lastPingValue", d.formatTime(new Date()));
     const result = await connection.invoke("Ping");
+    const elapsed = Math.round(performance.now() - started);
     countReceived();
     d.setText("lastPongValue", d.formatTime(result.serverTimestamp));
-    log(`Ping roundtrip ${Math.round(performance.now() - started)} ms:\n${d.safeJson(result)}`);
-  }
-
-  function finishFullTest() {
-    window.clearInterval(state.interval);
-    state.interval = null;
-    log("Full test completed.");
-    disconnect().catch(recordError);
+    log(`Ping roundtrip ${elapsed} ms:\n${d.safeJson(result)}`);
+    return { durationMs: elapsed, ok: true, result };
   }
 
   async function disconnect(logWhenClosed = true, cancelFullTest = true) {
@@ -247,7 +241,7 @@
         log("No active connection.");
       }
       updateStatus();
-      return;
+      return { alreadyDisconnected: true, ok: true };
     }
 
     const connection = state.connection;
@@ -260,6 +254,7 @@
     }
 
     updateStatus();
+    return { ok: true };
   }
 
   function signalROptions(hubUrl) {

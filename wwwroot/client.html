@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="css/site.css">
   <script src="lib/signalr/signalr.min.js"></script>
   <script src="js/common.js" defer></script>
+  <script src="js/client-full-test.js" defer></script>
   <script src="js/client.js" defer></script>
 </head>
 <body>
@@ -124,6 +125,20 @@
         <span>Last error</span>
         <strong id="lastErrorValue">-</strong>
       </article>
+    </section>
+
+    <section id="fullTestReportPanel" class="tool-panel report-panel" hidden>
+      <div class="panel-title">
+        <h2>Full Test Report</h2>
+        <span id="fullTestReportStatus" class="pill">Not run</span>
+      </div>
+      <div id="fullTestReportSummary" class="report-summary"></div>
+      <div id="fullTestReportDetails" class="report-grid"></div>
+      <div class="button-bar report-actions">
+        <button id="copyReportButton" type="button" class="secondary">Copy report</button>
+        <button id="downloadReportButton" type="button" class="secondary">Download JSON</button>
+      </div>
+      <pre id="fullTestReportText" class="report-text"></pre>
     </section>
 
     <section class="tool-panel">
