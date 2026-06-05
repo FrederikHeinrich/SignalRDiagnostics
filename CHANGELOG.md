@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.2] - 2026-06-05
+
+### Fixed
+
+- Fix CSS, JavaScript, navigation, redirects, negotiate diagnostics, and hub URLs when hosted below an IIS virtual directory such as `/SignalRDiagnostics`.
+
 ## [0.2.1] - 2026-06-05
 
 ### Added

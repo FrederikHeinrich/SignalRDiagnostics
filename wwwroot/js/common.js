@@ -78,6 +78,22 @@
     return new URL(normalizedPath, normalizedBase);
   }
 
+  function appBasePath() {
+    const path = window.location.pathname.replace(/\/+$/, "");
+
+    for (const page of ["/client", "/monitor"]) {
+      if (path.endsWith(page)) {
+        return path.slice(0, -page.length);
+      }
+    }
+
+    return "";
+  }
+
+  function defaultBaseUrl() {
+    return `${window.location.origin}${appBasePath()}`;
+  }
+
   function setBusy(button, busy) {
     if (!button) {
       return;
@@ -106,7 +122,9 @@
 
   window.Diagnostics = {
     appendLog,
+    appBasePath,
     buildHubUrl,
+    defaultBaseUrl,
     formatHeaders,
     formatDateTime,
     formatDuration,

@@ -26,6 +26,14 @@ Open the local URL printed by `dotnet run`, for example:
 
 The client page defaults the server base URL to the current browser origin and the hub path to `/testHub`.
 
+The pages also support IIS virtual directories. If the app is hosted below `/SignalRDiagnostics`, open:
+
+- `https://<server>/SignalRDiagnostics/client`
+- `https://<server>/SignalRDiagnostics/monitor`
+- `https://<server>/SignalRDiagnostics/api/health`
+
+Static assets and hub URLs are resolved relative to that base path.
+
 ## Publish
 
 Publish a framework-dependent build:
@@ -160,6 +168,7 @@ The `/client` page shows this warning when the connection closes between roughly
 - Backend health
 - Listener host names and certificates
 - Path-based routing rules for `/client`, `/monitor`, `/testHub`, and `/api/health`
+- Path-based routing rules for virtual-directory deployments such as `/SignalRDiagnostics/client`, `/SignalRDiagnostics/monitor`, `/SignalRDiagnostics/testHub`, and `/SignalRDiagnostics/api/health`
 - End-to-end TLS settings when the backend uses HTTPS
 
 ## Hub Methods

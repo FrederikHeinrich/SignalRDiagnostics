@@ -42,7 +42,7 @@ app.UseForwardedHeaders();
 app.UseStaticFiles();
 app.UseCors("DiagnosticsCors");
 
-app.MapGet("/", () => Results.Redirect("/client"));
+app.MapGet("/", () => Results.Redirect("client"));
 app.MapGet("/client", () => HtmlPage(app, "client.html"));
 app.MapGet("/monitor", () => HtmlPage(app, "monitor.html"));
 app.MapGet("/testHub/negotiate", (HttpContext context) =>
@@ -52,7 +52,7 @@ app.MapGet("/testHub/negotiate", (HttpContext context) =>
         diagnosticOnly = true,
         negotiateVersion = context.Request.Query["negotiateVersion"].ToString(),
         connectionId = Guid.NewGuid().ToString("N"),
-        url = $"{context.Request.Scheme}://{context.Request.Host}/testHub",
+        url = $"{context.Request.Scheme}://{context.Request.Host}{context.Request.PathBase}/testHub",
         availableTransports = new[]
         {
             new

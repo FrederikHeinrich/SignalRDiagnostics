@@ -33,7 +33,7 @@
     sent: 0
   };
 
-  elements.baseUrl.value = window.location.origin;
+  elements.baseUrl.value = d.defaultBaseUrl();
   updateStatus();
 
   elements.negotiateButton.addEventListener("click", () => runAction(elements.negotiateButton, testNegotiate));

@@ -9,7 +9,7 @@
 
   const state = { log: { count: 0 } };
   const connection = new signalR.HubConnectionBuilder()
-    .withUrl("/testHub")
+    .withUrl(d.buildHubUrl(d.defaultBaseUrl(), "/testHub").href)
     .withAutomaticReconnect([0, 2000, 5000, 10000])
     .configureLogging(signalR.LogLevel.Warning)
     .build();
