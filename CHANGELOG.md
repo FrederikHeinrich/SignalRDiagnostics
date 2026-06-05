@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.3] - 2026-06-05
+
+### Fixed
+
+- Prevent live logs from forcing the scroll position to the bottom while a user is reading older entries.
+
 ## [0.2.2] - 2026-06-05
 
 ### Fixed

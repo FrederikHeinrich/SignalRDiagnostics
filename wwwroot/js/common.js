@@ -46,10 +46,15 @@
       return;
     }
 
+    const distanceFromBottom = element.scrollHeight - element.scrollTop - element.clientHeight;
+    const shouldFollow = element.textContent.length === 0 || distanceFromBottom < 48;
     state.count += 1;
     const line = `[${formatTime(new Date())}] ${message}`;
     element.textContent += element.textContent ? `\n${line}` : line;
-    element.scrollTop = element.scrollHeight;
+
+    if (shouldFollow) {
+      element.scrollTop = element.scrollHeight;
+    }
   }
 
   function safeJson(value) {
