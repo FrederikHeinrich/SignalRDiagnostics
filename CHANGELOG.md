@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.2] - 2026-06-05
+
+### Fixed
+
+- Wrap long live log and report lines so URLs and query strings stay inside the visible log panel, with a cache-busted stylesheet reference.
+
 ## [0.3.1] - 2026-06-05
 
 ### Added
