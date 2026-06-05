@@ -64,12 +64,14 @@
   }
 
   function parseCookieNames(value) {
+    const attributes = new Set(["domain", "expires", "httponly", "max-age", "partitioned", "path", "priority", "samesite", "secure"]);
+
     return [...new Set(value
       .split(";")
       .map((part) => part.trim())
       .filter(Boolean)
       .map((part) => part.split("=")[0].trim())
-      .filter(Boolean))];
+      .filter((name) => name && !attributes.has(name.toLowerCase())))];
   }
 
   function cookieWriteMode(hubUrl, wantsCookies, cookieNames) {

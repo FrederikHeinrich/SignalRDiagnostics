@@ -126,6 +126,8 @@ Recommended test flow:
 
 When the full test finishes, `/client` shows a completion report with target settings, selected transport and authentication mode, negotiate result, connection id, echo timing, ping statistics, message counters, last error, and copy/download actions.
 
+The `/client` page includes Auth Utilities for generating diagnostic bearer tokens and building cookie input values. Generated JWT-like tokens are intentionally for transport and routing tests only; they are not signed with a real production key and should not be treated as trusted identity tokens.
+
 The `/monitor` server event log includes sanitized negotiate and connection request diagnostics for headers, cookies, and query parameters. The client also sends a diagnostic trace id and expected request metadata, so the monitor can show `Client expectation`, `Missing / changed`, and `Warnings` when headers, cookies, or query values appear to be stripped or rewritten in transit. Sensitive values such as bearer tokens, cookie values, WebSocket keys, and `access_token` query values are redacted while names, counts, and value lengths remain visible for routing and authentication diagnostics.
 
 Example gateway URLs:

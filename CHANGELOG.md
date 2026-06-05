@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.4] - 2026-06-05
+
+### Added
+
+- Add client-side bearer token generator and cookie builder utilities for diagnostic auth-flow tests.
+
 ## [0.3.3] - 2026-06-05
 
 ### Fixed
