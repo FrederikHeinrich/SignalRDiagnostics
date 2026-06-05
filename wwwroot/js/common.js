@@ -71,6 +71,22 @@
     return lines.join("\n");
   }
 
+  function formatUrlForLog(value) {
+    const url = value instanceof URL ? value : new URL(String(value));
+    const base = `${url.origin}${url.pathname}`;
+    const entries = [...url.searchParams.entries()];
+
+    if (entries.length === 0) {
+      return base;
+    }
+
+    return [
+      base,
+      "Query parameters:",
+      ...entries.map(([key, item]) => `  ${key}: ${item}`)
+    ].join("\n");
+  }
+
   function numberValue(element, fallback) {
     const value = Number(element.value);
     return Number.isFinite(value) && value > 0 ? value : fallback;
@@ -131,6 +147,7 @@
     buildHubUrl,
     defaultBaseUrl,
     formatHeaders,
+    formatUrlForLog,
     formatDateTime,
     formatDuration,
     formatTime,

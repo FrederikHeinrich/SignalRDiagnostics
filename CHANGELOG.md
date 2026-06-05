@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.3] - 2026-06-05
+
+### Fixed
+
+- Format long client request URLs across multiple log lines with one query parameter per line.
+
 ## [0.3.2] - 2026-06-05
 
 ### Fixed

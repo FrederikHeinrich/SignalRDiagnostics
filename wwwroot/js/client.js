@@ -76,7 +76,7 @@
     window.ClientRequestDiagnostics.applyToHeaders(headers, diagnostics);
     const started = performance.now();
 
-    log(`GET ${url.href}`);
+    log(`GET ${d.formatUrlForLog(url)}`);
     log(`Client request expectations:\n${window.ClientRequestDiagnostics.summary(diagnostics)}`);
 
     try {
@@ -116,7 +116,7 @@
 
     registerHandlers(connection);
     state.connection = connection;
-    log(`Connecting to ${hubUrl.href}`);
+    log(`Connecting to ${d.formatUrlForLog(hubUrl)}`);
     log(`Client request expectations:\n${window.ClientRequestDiagnostics.summary(diagnostics)}`);
 
     await connection.start();
