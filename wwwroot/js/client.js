@@ -68,12 +68,16 @@
   async function testNegotiate() {
     const hubUrl = d.buildHubUrl(elements.baseUrl.value, elements.hubPath.value);
     const url = new URL(`${hubUrl.href.replace(/\/$/, "")}/negotiate`);
+    const diagnostics = requestDiagnostics("negotiate", hubUrl);
+    window.ClientRequestDiagnostics.applyToUrl(url, diagnostics);
     url.searchParams.set("negotiateVersion", "1");
     const headers = {};
     const auth = authOptions(headers, hubUrl);
+    window.ClientRequestDiagnostics.applyToHeaders(headers, diagnostics);
     const started = performance.now();
 
     log(`GET ${url.href}`);
+    log(`Client request expectations:\n${window.ClientRequestDiagnostics.summary(diagnostics)}`);
 
     try {
       const response = await fetch(url, {
@@ -89,15 +93,7 @@
       log(`Negotiate duration: ${elapsed} ms`);
       log(`Response headers:\n${d.formatHeaders(response.headers) || "(none visible)"}`);
       log(`Body preview:\n${body.slice(0, 4000) || "(empty)"}`);
-      return {
-        bodyPreview: body.slice(0, 4000),
-        durationMs: elapsed,
-        headers: Object.fromEntries(response.headers.entries()),
-        ok: response.ok,
-        status: response.status,
-        statusText: response.statusText,
-        url: url.href
-      };
+      return { bodyPreview: body.slice(0, 4000), diagnostics, durationMs: elapsed, headers: Object.fromEntries(response.headers.entries()), ok: response.ok, status: response.status, statusText: response.statusText, url: url.href };
     } catch (error) {
       recordError(error);
       log("Negotiate failed. Browser CORS, TLS, WAF, routing, or backend availability can all block this request.");
@@ -109,7 +105,9 @@
     await disconnect(false, false);
 
     const hubUrl = d.buildHubUrl(elements.baseUrl.value, elements.hubPath.value);
-    const options = signalROptions(hubUrl);
+    const diagnostics = requestDiagnostics("connect", hubUrl);
+    window.ClientRequestDiagnostics.applyToUrl(hubUrl, diagnostics);
+    const options = signalROptions(hubUrl, diagnostics);
     const started = performance.now();
     const connection = new signalR.HubConnectionBuilder()
       .withUrl(hubUrl.href, options)
@@ -119,6 +117,7 @@
     registerHandlers(connection);
     state.connection = connection;
     log(`Connecting to ${hubUrl.href}`);
+    log(`Client request expectations:\n${window.ClientRequestDiagnostics.summary(diagnostics)}`);
 
     await connection.start();
     state.connectedAt = new Date();
@@ -136,7 +135,7 @@
 
     log(`Connected. Connection id: ${connection.connectionId || "(not exposed)"}`);
     updateStatus();
-    return { connectionId: connection.connectionId || "", durationMs: Math.round(performance.now() - started), ok: true, url: hubUrl.href };
+    return { connectionId: connection.connectionId || "", diagnostics, durationMs: Math.round(performance.now() - started), ok: true, url: hubUrl.href };
   }
 
   function registerHandlers(connection) {
@@ -257,12 +256,11 @@
     return { ok: true };
   }
 
-  function signalROptions(hubUrl) {
+  function signalROptions(hubUrl, diagnostics) {
     const headers = {};
     const auth = authOptions(headers, hubUrl);
-    const options = {
-      withCredentials: auth.credentials === "include"
-    };
+    window.ClientRequestDiagnostics.applyToHeaders(headers, diagnostics);
+    const options = { withCredentials: auth.credentials === "include" };
 
     if (Object.keys(headers).length > 0) {
       options.headers = headers;
@@ -289,10 +287,7 @@
         headers.Authorization = `Bearer ${token}`;
       }
 
-      return {
-        credentials: "include",
-        accessTokenFactory: token ? () => token : undefined
-      };
+      return { credentials: "include", accessTokenFactory: token ? () => token : undefined };
     }
 
     if (authMode === "cookie") {
@@ -319,12 +314,9 @@
 
   function transportValue() {
     switch (elements.transportMode.value) {
-      case "webSockets":
-        return signalR.HttpTransportType.WebSockets;
-      case "serverSentEvents":
-        return signalR.HttpTransportType.ServerSentEvents;
-      case "longPolling":
-        return signalR.HttpTransportType.LongPolling;
+      case "webSockets": return signalR.HttpTransportType.WebSockets;
+      case "serverSentEvents": return signalR.HttpTransportType.ServerSentEvents;
+      case "longPolling": return signalR.HttpTransportType.LongPolling;
       default:
         return null;
     }
@@ -333,6 +325,10 @@
   function transportLabel() { return elements.transportMode.options[elements.transportMode.selectedIndex].text; }
 
   function authLabel() { return elements.authMode.options[elements.authMode.selectedIndex].text; }
+
+  function requestDiagnostics(stage, hubUrl) {
+    return window.ClientRequestDiagnostics.create({ authMode: elements.authMode.value, bearerToken: elements.bearerToken.value, cookieValue: elements.cookieValue.value, hubUrl, stage, transportMode: transportLabel() });
+  }
 
   function requireConnection() {
     if (!state.connection || state.connection.state !== signalR.HubConnectionState.Connected) {

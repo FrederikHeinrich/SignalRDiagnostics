@@ -18,7 +18,8 @@ public static class RequestDiagnosticsBuilder
         "X-Auth-Token",
         "X-CSRF-Token",
         "X-XSRF-Token",
-        "Sec-WebSocket-Key"
+        "Sec-WebSocket-Key",
+        RequestExpectationReader.DiagnosticsHeaderName
     };
 
     private static readonly HashSet<string> SensitiveQueryParameters = new(NameComparer)
@@ -38,6 +39,20 @@ public static class RequestDiagnosticsBuilder
         }
 
         var request = httpContext.Request;
+        var headers = request.Headers
+            .OrderBy(header => header.Key, NameComparer)
+            .Select(header => HeaderValue(header.Key, header.Value.ToString(), request.Cookies.Count))
+            .ToArray();
+        var cookies = request.Cookies
+            .OrderBy(cookie => cookie.Key, NameComparer)
+            .Select(cookie => new NameValueDiagnostic(cookie.Key, Redacted(cookie.Value)))
+            .ToArray();
+        var queryParameters = request.Query
+            .OrderBy(parameter => parameter.Key, NameComparer)
+            .Select(parameter => QueryValue(parameter.Key, parameter.Value.ToString()))
+            .ToArray();
+        var expectation = RequestExpectationReader.From(request);
+        var comparison = RequestExpectationComparer.Compare(expectation, headers, cookies, queryParameters);
 
         return new RequestDiagnostics(
             request.Method,
@@ -45,23 +60,15 @@ public static class RequestDiagnosticsBuilder
             request.Host.ToString(),
             request.PathBase.ToString(),
             request.Path.ToString(),
-            request.QueryString.HasValue
-                ? $"[present; {request.Query.Count} parameter(s)]"
-                : "",
+            request.QueryString.HasValue ? $"[present; {request.Query.Count} parameter(s)]" : "",
             httpContext.Connection.RemoteIpAddress?.ToString(),
             request.Headers["User-Agent"].ToString(),
-            request.Headers
-                .OrderBy(header => header.Key, NameComparer)
-                .Select(header => HeaderValue(header.Key, header.Value.ToString(), request.Cookies.Count))
-                .ToArray(),
-            request.Cookies
-                .OrderBy(cookie => cookie.Key, NameComparer)
-                .Select(cookie => new NameValueDiagnostic(cookie.Key, Redacted(cookie.Value)))
-                .ToArray(),
-            request.Query
-                .OrderBy(parameter => parameter.Key, NameComparer)
-                .Select(parameter => QueryValue(parameter.Key, parameter.Value.ToString()))
-                .ToArray());
+            headers,
+            cookies,
+            queryParameters,
+            expectation,
+            comparison.Missing,
+            comparison.Warnings);
     }
 
     private static NameValueDiagnostic HeaderValue(string name, string value, int cookieCount)

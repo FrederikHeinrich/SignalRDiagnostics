@@ -7,7 +7,7 @@
     state: document.getElementById("monitorState")
   };
 
-  const state = { log: { count: 0 } };
+  const state = { log: { count: 0 }, seenEvents: new Set() };
   const connection = new signalR.HubConnectionBuilder()
     .withUrl(d.buildHubUrl(d.defaultBaseUrl(), "/testHub").href)
     .withAutomaticReconnect([0, 2000, 5000, 10000])
@@ -20,10 +20,7 @@
   });
 
   connection.on("MonitorUpdate", renderSnapshot);
-  connection.on("ServerEvent", (event) => {
-    const details = formatEventDetails(event.details);
-    log(`${event.eventType.toUpperCase()} ${event.clientId}: ${event.message}${details ? `\n${details}` : ""}`);
-  });
+  connection.on("ServerEvent", appendServerEvent);
 
   connection.onreconnecting((error) => {
     elements.state.textContent = "Reconnecting";
@@ -72,6 +69,11 @@
     d.setText("messagesReceived", snapshot.messagesReceived);
     d.setText("averageSessionDuration", `${Math.round(snapshot.averageSessionDurationSeconds)}s`);
     renderClients(snapshot.activeClients || []);
+    renderRecentEvents(snapshot.recentEvents || []);
+  }
+
+  function renderRecentEvents(events) {
+    events.forEach(appendServerEvent);
   }
 
   function renderClients(clients) {
@@ -99,6 +101,16 @@
     d.appendLog(elements.log, message, state.log);
   }
 
+  function appendServerEvent(event) {
+    if (!event || state.seenEvents.has(event.id)) {
+      return;
+    }
+
+    state.seenEvents.add(event.id);
+    const details = formatEventDetails(event.details);
+    log(`${event.eventType.toUpperCase()} ${event.clientId}: ${event.message}${details ? `\n${details}` : ""}`);
+  }
+
   function formatEventDetails(details) {
     if (!details || Object.keys(details).length === 0) {
       return "";
@@ -122,11 +134,49 @@
       `  Query: ${request.queryString || "-"}`
     ];
 
+    lines.push(formatExpectation(request.clientExpectation));
+    lines.push(formatList("Missing / changed", request.missingExpectations));
+    lines.push(formatList("Warnings", request.warnings));
     lines.push(formatItems("Query parameters", request.queryParameters));
     lines.push(formatItems("Headers", request.headers));
     lines.push(formatItems("Cookies", request.cookies));
 
     return lines.filter(Boolean).join("\n");
+  }
+
+  function formatExpectation(expectation) {
+    if (!expectation) {
+      return "  Client expectation: -";
+    }
+
+    const cookies = Array.isArray(expectation.expectedCookieNames) && expectation.expectedCookieNames.length
+      ? expectation.expectedCookieNames.join(", ")
+      : "-";
+    const sources = Array.isArray(expectation.sources) && expectation.sources.length
+      ? expectation.sources.join(", ")
+      : "-";
+
+    return [
+      "  Client expectation:",
+      `    Trace id: ${expectation.traceId || "-"}`,
+      `    Stage: ${expectation.stage || "-"}`,
+      `    Auth: ${expectation.authMode || "-"} / ${expectation.transportMode || "-"}`,
+      `    Sources: ${sources}`,
+      `    Bearer expected: ${expectation.expectBearerCredential ? "yes" : "no"}`,
+      `    Authorization header expected: ${expectation.expectAuthorizationHeader ? "yes" : "no"}`,
+      `    access_token query expected: ${expectation.expectAccessTokenQuery ? "yes" : "no"}`,
+      `    Diagnostic header expected: ${expectation.expectDiagnosticHeader ? "yes" : "no"}`,
+      `    Cookie names expected: ${cookies}`,
+      `    Cookie mode: ${expectation.cookieWriteMode || "-"}`
+    ].join("\n");
+  }
+
+  function formatList(label, items) {
+    if (!Array.isArray(items) || items.length === 0) {
+      return `  ${label}: -`;
+    }
+
+    return `  ${label}:\n${items.map((item) => `    - ${item}`).join("\n")}`;
   }
 
   function formatItems(label, items) {

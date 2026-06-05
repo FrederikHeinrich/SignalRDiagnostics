@@ -5,6 +5,8 @@
 ### Added
 
 - Add sanitized request header, cookie, and query diagnostics to monitor server event logs for negotiate and connection events.
+- Add client request expectation metadata with trace ids, missing item detection, and proxy/gateway warnings.
+- Replay recent server events from monitor snapshots so diagnostics remain visible after opening or reconnecting the monitor.
 
 ## [0.3.0] - 2026-06-05
 

@@ -42,26 +42,34 @@ var app = builder.Build();
 app.UseForwardedHeaders();
 app.UseStaticFiles();
 app.UseCors("DiagnosticsCors");
+app.Use(async (context, next) =>
+{
+    if (IsNegotiateRequest(context.Request))
+    {
+        var requestDiagnostics = RequestDiagnosticsBuilder.From(context);
+        var tracker = context.RequestServices.GetRequiredService<ConnectionTracker>();
+        var hubContext = context.RequestServices.GetRequiredService<IHubContext<TestHub>>();
+        var hubEvent = tracker.RecordHttpRequest(
+            "negotiate",
+            context.TraceIdentifier,
+            requestDiagnostics?.ClientExpectation?.TraceId
+                ?? requestDiagnostics?.RemoteIpAddress
+                ?? "http-client",
+            $"{context.Request.Method} negotiate requested",
+            requestDiagnostics);
+
+        await hubContext.Clients.Group(HubGroups.Monitors).SendAsync("ServerEvent", hubEvent);
+        await hubContext.Clients.Group(HubGroups.Monitors).SendAsync("MonitorUpdate", tracker.GetSnapshot());
+    }
+
+    await next();
+});
 
 app.MapGet("/", () => Results.Redirect("client"));
 app.MapGet("/client", () => HtmlPage(app, "client.html"));
 app.MapGet("/monitor", () => HtmlPage(app, "monitor.html"));
-app.MapGet("/testHub/negotiate", async (
-    HttpContext context,
-    ConnectionTracker tracker,
-    IHubContext<TestHub> hubContext) =>
+app.MapGet("/testHub/negotiate", (HttpContext context) =>
 {
-    var requestDiagnostics = RequestDiagnosticsBuilder.From(context);
-    var hubEvent = tracker.RecordHttpRequest(
-        "negotiate",
-        context.TraceIdentifier,
-        requestDiagnostics?.RemoteIpAddress ?? "http-client",
-        "Diagnostic negotiate requested",
-        requestDiagnostics);
-
-    await hubContext.Clients.Group(HubGroups.Monitors).SendAsync("ServerEvent", hubEvent);
-    await hubContext.Clients.Group(HubGroups.Monitors).SendAsync("MonitorUpdate", tracker.GetSnapshot());
-
     return Results.Json(new
     {
         diagnosticOnly = true,
@@ -115,4 +123,10 @@ static IResult HtmlPage(WebApplication app, string fileName)
     return File.Exists(path)
         ? Results.File(path, "text/html; charset=utf-8")
         : Results.NotFound($"{fileName} was not found.");
+}
+
+static bool IsNegotiateRequest(HttpRequest request)
+{
+    return (HttpMethods.IsGet(request.Method) || HttpMethods.IsPost(request.Method))
+        && request.Path.Equals("/testHub/negotiate", StringComparison.OrdinalIgnoreCase);
 }

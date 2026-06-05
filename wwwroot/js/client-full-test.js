@@ -130,6 +130,7 @@
       ["Ended", session.endedAt.toLocaleString()],
       ["Runtime", `${durationSeconds}s`],
       ["Target", `${session.config.baseUrl}${session.config.hubPath}`],
+      ["Trace id", traceIds(session)],
       ["Transport", session.config.transportMode],
       ["Auth", session.config.authMode],
       ["Negotiate", session.negotiate?.ok ? `${session.negotiate.status} in ${session.negotiate.durationMs} ms` : errorText(session.negotiate)],
@@ -165,6 +166,13 @@
     return session.negotiate?.ok && session.connection?.ok && session.echo?.ok && pingStats.count > 0
       ? "Passed"
       : "Warning";
+  }
+
+  function traceIds(session) {
+    return [
+      session.negotiate?.diagnostics?.traceId,
+      session.connection?.diagnostics?.traceId
+    ].filter(Boolean).join(" / ") || "-";
   }
 
   function summarizePings(pings) {
